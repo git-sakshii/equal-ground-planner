@@ -1,16 +1,27 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { MapPin, Plus, X, Car, Navigation, Train, Bike } from "lucide-react";
+import { Autocomplete } from "@react-google-maps/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
+import MapView from "@/components/MapView";
+import ResultsPanel from "@/components/ResultsPanel";
+import {
+  reverseGeocode,
+  calculateTimeEquitableMidpoint,
+  Location,
+  LocationWithMode,
+} from "@/services/mapsService";
 
 type TransportMode = "DRIVING" | "WALKING" | "TRANSIT" | "BICYCLING";
 
-interface Location {
+interface LocationInput {
   id: string;
   address: string;
+  lat?: number;
+  lng?: number;
   transportMode: TransportMode;
 }
 
@@ -22,12 +33,19 @@ const transportModes = [
 ];
 
 const FindMeetup = () => {
-  const [locations, setLocations] = useState<Location[]>([
+  const [locations, setLocations] = useState<LocationInput[]>([
     { id: "1", address: "", transportMode: "DRIVING" },
     { id: "2", address: "", transportMode: "DRIVING" },
   ]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [midpoint, setMidpoint] = useState<Location | null>(null);
+  const [midpointAddress, setMidpointAddress] = useState("");
+  const [travelTimes, setTravelTimes] = useState<any[]>([]);
+  const [fairnessScore, setFairnessScore] = useState(0);
+  const [showResults, setShowResults] = useState(false);
+  
+  const autocompleteRefs = useRef<{ [key: string]: google.maps.places.Autocomplete | null }>({});
 
   const addLocation = () => {
     if (locations.length < 6) {
@@ -53,7 +71,7 @@ const FindMeetup = () => {
     }
   };
 
-  const updateLocation = (id: string, field: keyof Location, value: string) => {
+  const updateLocation = (id: string, field: keyof LocationInput, value: any) => {
     setLocations(
       locations.map((loc) =>
         loc.id === id ? { ...loc, [field]: value } : loc
@@ -66,39 +84,115 @@ const FindMeetup = () => {
     }
   };
 
-  const validateAndSubmit = () => {
-    const newErrors: Record<string, string> = {};
-    
-    locations.forEach((loc) => {
-      if (loc.address.length < 3) {
-        newErrors[loc.id] = "Please enter at least 3 characters";
+  const onPlaceChanged = (id: string) => {
+    const autocomplete = autocompleteRefs.current[id];
+    if (autocomplete) {
+      const place = autocomplete.getPlace();
+      if (place.geometry?.location) {
+        const lat = place.geometry.location.lat();
+        const lng = place.geometry.location.lng();
+        const address = place.formatted_address || place.name || "";
+        
+        setLocations(
+          locations.map((loc) =>
+            loc.id === id
+              ? { ...loc, address, lat, lng }
+              : loc
+          )
+        );
+
+        const newErrors = { ...errors };
+        delete newErrors[id];
+        setErrors(newErrors);
+        
+        toast.success("Location set ✓");
       }
-    });
-
-    setErrors(newErrors);
-
-    if (Object.keys(newErrors).length === 0) {
-      setLoading(true);
-      console.log("Submitting locations:", locations);
-      
-      // Simulate API call
-      setTimeout(() => {
-        setLoading(false);
-        toast.success("Finding midpoint and venues...");
-      }, 1500);
-    } else {
-      toast.error("Please enter at least 2 locations");
     }
   };
 
-  const useCurrentLocation = (id: string) => {
+  const validateAndSubmit = async () => {
+    const newErrors: Record<string, string> = {};
+    
+    const validLocations = locations.filter(loc => loc.lat && loc.lng && loc.address.length >= 3);
+    
+    if (validLocations.length < 2) {
+      toast.error("Please enter at least 2 valid locations");
+      return;
+    }
+
+    setLoading(true);
+    setShowResults(false);
+
+    try {
+      toast.info("Calculating fair midpoint...");
+      
+      const locationsWithMode: LocationWithMode[] = validLocations.map(loc => ({
+        lat: loc.lat!,
+        lng: loc.lng!,
+        transportMode: loc.transportMode,
+      }));
+
+      const result = await calculateTimeEquitableMidpoint(locationsWithMode);
+      
+      const address = await reverseGeocode(result.midpoint.lat, result.midpoint.lng);
+      
+      setMidpoint(result.midpoint);
+      setMidpointAddress(address);
+      setTravelTimes(result.travelTimes);
+      setFairnessScore(result.fairnessScore);
+      setShowResults(true);
+      
+      toast.success("Perfect spot found!");
+      
+      // Scroll to results
+      setTimeout(() => {
+        document.getElementById("results-section")?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
+    } catch (error) {
+      console.error("Error calculating midpoint:", error);
+      toast.error("Unable to calculate midpoint. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetResults = () => {
+    setShowResults(false);
+    setMidpoint(null);
+    setMidpointAddress("");
+    setTravelTimes([]);
+    setFairnessScore(0);
+  };
+
+  const useCurrentLocation = async (id: string) => {
     if ("geolocation" in navigator) {
       toast.info("Getting location...");
       navigator.geolocation.getCurrentPosition(
-        (position) => {
+        async (position) => {
           const { latitude, longitude } = position.coords;
-          updateLocation(id, "address", `Lat: ${latitude.toFixed(4)}, Lng: ${longitude.toFixed(4)}`);
-          toast.success("Location detected ✓");
+          try {
+            toast.info("Getting address...");
+            const address = await reverseGeocode(latitude, longitude);
+            
+            setLocations(
+              locations.map((loc) =>
+                loc.id === id
+                  ? { ...loc, address, lat: latitude, lng: longitude }
+                  : loc
+              )
+            );
+            
+            const newErrors = { ...errors };
+            delete newErrors[id];
+            setErrors(newErrors);
+            
+            toast.success(`Location set to: ${address}`);
+          } catch (error) {
+            updateLocation(id, "address", `Lat: ${latitude.toFixed(4)}, Lng: ${longitude.toFixed(4)}`);
+            updateLocation(id, "lat", latitude);
+            updateLocation(id, "lng", longitude);
+            toast.success("Location detected ✓");
+          }
         },
         (error) => {
           if (error.code === error.PERMISSION_DENIED) {
@@ -153,25 +247,39 @@ const FindMeetup = () => {
                   </div>
 
                   <div className="relative">
-                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                    <Input
-                      placeholder="Enter address, city, or landmark"
-                      value={location.address}
-                      onChange={(e) =>
-                        updateLocation(location.id, "address", e.target.value)
-                      }
-                      className={`pl-12 h-14 text-base ${
-                        errors[location.id]
-                          ? "border-destructive"
-                          : location.address.length >= 3
-                          ? "border-success"
-                          : ""
-                      }`}
-                    />
+                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10" />
+                    <Autocomplete
+                      onLoad={(autocomplete) => {
+                        autocompleteRefs.current[location.id] = autocomplete;
+                      }}
+                      onPlaceChanged={() => onPlaceChanged(location.id)}
+                      options={{
+                        types: ["geocode", "establishment"],
+                      }}
+                    >
+                      <Input
+                        placeholder="Enter address, city, or landmark"
+                        value={location.address}
+                        onChange={(e) =>
+                          updateLocation(location.id, "address", e.target.value)
+                        }
+                        className={`pl-12 h-14 text-base ${
+                          errors[location.id]
+                            ? "border-destructive"
+                            : location.lat && location.lng
+                            ? "border-green-500"
+                            : ""
+                        }`}
+                      />
+                    </Autocomplete>
                     {location.address && (
                       <button
-                        onClick={() => updateLocation(location.id, "address", "")}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        onClick={() => {
+                          updateLocation(location.id, "address", "");
+                          updateLocation(location.id, "lat", undefined);
+                          updateLocation(location.id, "lng", undefined);
+                        }}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground z-10"
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -239,7 +347,7 @@ const FindMeetup = () => {
             {/* Submit Button */}
             <Button
               onClick={validateAndSubmit}
-              disabled={loading || locations.filter(l => l.address.length >= 3).length < 2}
+              disabled={loading || locations.filter(l => l.lat && l.lng && l.address.length >= 3).length < 2}
               className="w-full h-14 text-base bg-gradient-to-r from-primary to-primary-glow text-primary-foreground hover:shadow-primary transition-all disabled:opacity-50"
             >
               {loading ? (
@@ -258,15 +366,38 @@ const FindMeetup = () => {
             </p>
           </div>
         </div>
+
+        {/* Results Section */}
+        {showResults && midpoint && (
+          <div id="results-section" className="max-w-6xl mx-auto space-y-6">
+            <ResultsPanel
+              locations={locations.filter(l => l.lat && l.lng)}
+              midpointAddress={midpointAddress}
+              travelTimes={travelTimes}
+              fairnessScore={fairnessScore}
+              onReset={resetResults}
+            />
+            
+            <MapView
+              locations={locations.filter(l => l.lat && l.lng) as any}
+              midpoint={midpoint}
+              midpointAddress={midpointAddress}
+              travelTimes={travelTimes}
+            />
+          </div>
+        )}
       </div>
 
       {/* Loading Overlay */}
       {loading && (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="text-center">
+          <div className="text-center space-y-2">
             <div className="w-16 h-16 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-4" />
             <p className="text-lg font-medium text-foreground">
-              Finding the perfect spot...
+              Calculating fair midpoint...
+            </p>
+            <p className="text-sm text-muted-foreground">
+              This usually takes 5-10 seconds
             </p>
           </div>
         </div>
