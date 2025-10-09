@@ -8,12 +8,17 @@ import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
 import MapView from "@/components/MapView";
 import ResultsPanel from "@/components/ResultsPanel";
+import VenueList from "@/components/VenueList";
+import VenueModal from "@/components/VenueModal";
+import WeatherWidget from "@/components/WeatherWidget";
 import {
   reverseGeocode,
   calculateTimeEquitableMidpoint,
   Location,
   LocationWithMode,
+  calculateTravelTime,
 } from "@/services/mapsService";
+import { searchNearbyVenues, processVenues, Venue, formatDuration } from "@/services/venueService";
 
 type TransportMode = "DRIVING" | "WALKING" | "TRANSIT" | "BICYCLING";
 
@@ -44,6 +49,9 @@ const FindMeetup = () => {
   const [travelTimes, setTravelTimes] = useState<any[]>([]);
   const [fairnessScore, setFairnessScore] = useState(0);
   const [showResults, setShowResults] = useState(false);
+  const [venues, setVenues] = useState<Venue[]>([]);
+  const [loadingVenues, setLoadingVenues] = useState(false);
+  const [selectedVenueId, setSelectedVenueId] = useState<string | null>(null);
   
   const autocompleteRefs = useRef<{ [key: string]: google.maps.places.Autocomplete | null }>({});
 
@@ -144,6 +152,9 @@ const FindMeetup = () => {
       
       toast.success("Perfect spot found!");
       
+      // Search for venues near the midpoint
+      await searchVenues(result.midpoint, validLocations);
+      
       // Scroll to results
       setTimeout(() => {
         document.getElementById("results-section")?.scrollIntoView({ behavior: "smooth" });
@@ -156,12 +167,52 @@ const FindMeetup = () => {
     }
   };
 
+  const searchVenues = async (midpointLocation: Location, validLocations: LocationInput[]) => {
+    setLoadingVenues(true);
+    try {
+      toast.info("Finding great places nearby...");
+      
+      // Search for cafes by default
+      const rawVenues = await searchNearbyVenues(midpointLocation, 2000, 'cafe');
+      const processed = processVenues(rawVenues, midpointLocation);
+      
+      // Calculate travel times for each venue for each person
+      const venuesWithTravelTimes = await Promise.all(
+        processed.map(async (venue) => {
+          const travelTimes = await Promise.all(
+            validLocations.map(async (loc) => {
+              const result = await calculateTravelTime(
+                { lat: loc.lat!, lng: loc.lng! },
+                { lat: venue.lat, lng: venue.lng },
+                loc.transportMode
+              );
+              return {
+                duration: result.duration,
+                durationText: result.durationText
+              };
+            })
+          );
+          return { ...venue, travelTimes };
+        })
+      );
+      
+      setVenues(venuesWithTravelTimes);
+      toast.success(`Found ${venuesWithTravelTimes.length} venues!`);
+    } catch (error) {
+      console.error("Error searching venues:", error);
+      toast.error("Unable to find venues. Showing map only.");
+    } finally {
+      setLoadingVenues(false);
+    }
+  };
+
   const resetResults = () => {
     setShowResults(false);
     setMidpoint(null);
     setMidpointAddress("");
     setTravelTimes([]);
     setFairnessScore(0);
+    setVenues([]);
   };
 
   const useCurrentLocation = async (id: string) => {
@@ -369,7 +420,7 @@ const FindMeetup = () => {
 
         {/* Results Section */}
         {showResults && midpoint && (
-          <div id="results-section" className="max-w-6xl mx-auto space-y-6">
+          <div id="results-section" className="max-w-7xl mx-auto space-y-6">
             <ResultsPanel
               locations={locations.filter(l => l.lat && l.lng)}
               midpointAddress={midpointAddress}
@@ -378,14 +429,37 @@ const FindMeetup = () => {
               onReset={resetResults}
             />
             
-            <MapView
-              locations={locations.filter(l => l.lat && l.lng) as any}
-              midpoint={midpoint}
-              midpointAddress={midpointAddress}
-              travelTimes={travelTimes}
-            />
+            {/* Weather Widget */}
+            <WeatherWidget lat={midpoint.lat} lng={midpoint.lng} />
+            
+            {/* Map and Venues Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="order-2 lg:order-1">
+                <MapView
+                  locations={locations.filter(l => l.lat && l.lng) as any}
+                  midpoint={midpoint}
+                  midpointAddress={midpointAddress}
+                  travelTimes={travelTimes}
+                />
+              </div>
+              
+              <div className="order-1 lg:order-2">
+                <VenueList
+                  venues={venues}
+                  midpoint={midpoint}
+                  loading={loadingVenues}
+                  onVenueSelect={(venue) => setSelectedVenueId(venue.placeId)}
+                />
+              </div>
+            </div>
           </div>
         )}
+
+        {/* Venue Details Modal */}
+        <VenueModal
+          placeId={selectedVenueId}
+          onClose={() => setSelectedVenueId(null)}
+        />
       </div>
 
       {/* Loading Overlay */}
