@@ -8,53 +8,102 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 47.4% 11.2%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 47.4% 11.2%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 47.4% 11.2%;
-
-    /* Blue to Purple gradient theme */
-    --primary: 238.7 83.5% 66.7%; /* Indigo #6366f1 */
-    --primary-foreground: 0 0% 100%;
-    --primary-glow: 270 91% 65%; /* Purple #a855f7 */
+    /* Dark theme as default - Premium dark backgrounds */
+    --background: 222 47% 5%;        /* #0a0a0f - Almost black */
+    --foreground: 0 0% 100%;         /* White text */
     
-    --secondary: 220 14.3% 95.9%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-
-    --muted: 220 14.3% 95.9%;
-    --muted-foreground: 220 8.9% 46.1%;
-
-    --accent: 220 14.3% 95.9%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 238.7 83.5% 66.7%;
-
-    --success: 142.1 76.2% 36.3%;
+    /* Surfaces */
+    --card: 235 21% 15%;             /* #1a1a2e - Dark blue-gray cards */
+    --card-foreground: 0 0% 100%;
+    
+    --popover: 235 21% 15%;
+    --popover-foreground: 0 0% 100%;
+    
+    /* Primary - Blue to Purple gradient base */
+    --primary: 243 75% 59%;          /* #6366f1 - Indigo */
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 270 70% 60%;     /* #a855f7 - Purple for glow */
+    
+    /* Secondary - Purple tones */
+    --secondary: 270 70% 60%;        /* #a855f7 */
+    --secondary-foreground: 0 0% 100%;
+    
+    /* Accent - Pink */
+    --accent: 330 81% 60%;           /* #ec4899 */
+    --accent-foreground: 0 0% 100%;
+    
+    /* Success */
+    --success: 160 84% 39%;          /* #10b981 - Green */
     --success-foreground: 0 0% 100%;
-
-    --radius: 0.75rem;
-
+    
+    /* Muted elements */
+    --muted: 235 15% 20%;            /* Slightly lighter than card */
+    --muted-foreground: 0 0% 70%;    /* Gray text */
+    
+    /* Borders */
+    --border: 0 0% 100% / 0.1;       /* White 10% opacity */
+    --input: 0 0% 100% / 0.1;
+    --ring: 243 75% 59%;             /* Primary for focus rings */
+    
+    /* Destructive */
+    --destructive: 0 84% 60%;        /* #ef4444 - Red */
+    --destructive-foreground: 0 0% 100%;
+    
+    /* Chart colors */
+    --chart-1: 243 75% 59%;
+    --chart-2: 270 70% 60%;
+    --chart-3: 330 81% 60%;
+    --chart-4: 160 84% 39%;
+    --chart-5: 38 92% 50%;
+    
     /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(238.7 83.5% 66.7%), hsl(270 91% 65%));
-    --gradient-hero: linear-gradient(135deg, hsl(238.7 83.5% 66.7%) 0%, hsl(270 91% 65%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(243, 75%, 59%) 0%, hsl(270, 70%, 60%) 100%);
+    --gradient-secondary: linear-gradient(135deg, hsl(270, 70%, 60%) 0%, hsl(330, 81%, 60%) 100%);
+    --gradient-hero: linear-gradient(180deg, hsl(222, 47%, 5%) 0%, hsl(235, 21%, 15%) 100%);
+    --gradient-full: linear-gradient(135deg, hsl(243, 75%, 59%) 0%, hsl(270, 70%, 60%) 50%, hsl(330, 81%, 60%) 100%);
     
     /* Shadows */
-    --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.04);
-    --shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.08);
-    --shadow-large: 0 8px 32px rgba(0, 0, 0, 0.12);
-    --shadow-primary: 0 8px 24px hsl(238.7 83.5% 66.7% / 0.25);
+    --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.1);
+    --shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.2);
+    --shadow-large: 0 8px 32px rgba(0, 0, 0, 0.3);
+    --shadow-xl: 0 16px 64px rgba(0, 0, 0, 0.4);
+    --shadow-primary: 0 0 32px hsl(243, 75%, 59% / 0.5);
+    --shadow-glow: 0 0 40px hsl(270, 70%, 60% / 0.4);
+    
+    /* Glassmorphism */
+    --glass-bg: hsl(235, 21%, 15% / 0.8);
+    --glass-border: hsl(0, 0%, 100% / 0.1);
     
     /* Transitions */
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-normal: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: 500ms cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Radius */
+    --radius: 1rem;
+  }
+  
+  .light {
+    --background: 0 0% 97%;
+    --foreground: 222 47% 11%;
+    
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
+    
+    --border: 0 0% 0% / 0.1;
+    --input: 0 0% 0% / 0.1;
+    
+    --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.05);
+    --shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.08);
+    --shadow-large: 0 8px 32px rgba(0, 0, 0, 0.12);
+    
+    --glass-bg: hsl(0, 0%, 100% / 0.8);
   }
 
   .dark {
