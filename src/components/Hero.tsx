@@ -1,12 +1,27 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import { motion } from "framer-motion";
+import { Suspense, lazy } from "react";
+import FloatingElements from "./FloatingElements";
+
+const Hero3D = lazy(() => import("./Hero3D"));
 
 const Hero = () => {
   const navigate = useNavigate();
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-hero pt-16">
+      {/* 3D Background Element */}
+      <div className="absolute inset-0 opacity-30">
+        <Suspense fallback={null}>
+          <Hero3D />
+        </Suspense>
+      </div>
+
+      {/* Floating animated icons */}
+      <FloatingElements />
+
       {/* Enhanced background with multiple layers */}
       <div className="absolute inset-0 overflow-hidden">
         {/* Gradient mesh */}
@@ -23,52 +38,89 @@ const Hero = () => {
 
       <div className="container mx-auto px-4 sm:px-6 relative z-10">
         <div className="max-w-5xl mx-auto text-center">
-          {/* Main Headline - Ultra bold */}
-          <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold text-white mb-6 animate-fade-in-up leading-[1.1] tracking-tight">
+          {/* Main Headline - Ultra bold with animation */}
+          <motion.h1
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: [0.21, 0.47, 0.32, 0.98] }}
+            className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold text-white mb-6 leading-[1.1] tracking-tight"
+          >
             Meet in the{" "}
-            <span className="bg-gradient-to-r from-primary via-primary-glow to-accent bg-clip-text text-transparent">
+            <motion.span
+              initial={{ backgroundPosition: "0% 50%" }}
+              animate={{ backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"] }}
+              transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
+              className="bg-gradient-to-r from-primary via-primary-glow to-accent bg-clip-text text-transparent"
+              style={{ backgroundSize: "200% 200%" }}
+            >
               Middle
-            </span>
+            </motion.span>
             .
-          </h1>
+          </motion.h1>
 
           {/* Subheadline - Large and light */}
-          <p className="text-2xl sm:text-3xl md:text-4xl text-white/60 font-light mb-4 animate-fade-in-up" style={{ animationDelay: "0.1s", animationFillMode: "both" }}>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2, ease: [0.21, 0.47, 0.32, 0.98] }}
+            className="text-2xl sm:text-3xl md:text-4xl text-white/60 font-light mb-4"
+          >
             Fair for everyone.
-          </p>
+          </motion.p>
 
           {/* Short punchy copy */}
-          <p className="text-base sm:text-lg md:text-xl text-white/70 mb-12 max-w-2xl mx-auto animate-fade-in-up" style={{ animationDelay: "0.15s", animationFillMode: "both" }}>
-            Smart location finder for groups. No more arguments about where to meet.
-          </p>
-
-          {/* CTA Button - Large gradient pill */}
-          <Button
-            onClick={() => navigate("/find-meetup")}
-            variant="gradient"
-            size="xl"
-            className="animate-scale-in group font-semibold"
-            style={{ animationDelay: "0.2s", animationFillMode: "both" }}
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.3, ease: [0.21, 0.47, 0.32, 0.98] }}
+            className="text-base sm:text-lg md:text-xl text-white/70 mb-12 max-w-2xl mx-auto"
           >
-            Find Your Spot
-            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
-          </Button>
+            Smart location finder for groups. No more arguments about where to meet.
+          </motion.p>
 
-          {/* Trust indicators - Modernized */}
-          <div className="mt-16 sm:mt-20 flex flex-wrap items-center justify-center gap-6 sm:gap-10 animate-fade-in" style={{ animationDelay: "0.3s", animationFillMode: "both" }}>
-            <div className="flex items-center gap-2.5 text-white/80">
-              <div className="w-2 h-2 bg-success rounded-full shadow-glow animate-pulse" style={{ boxShadow: '0 0 8px hsl(var(--success))' }} />
-              <span className="text-sm sm:text-base font-medium">Free to use</span>
-            </div>
-            <div className="flex items-center gap-2.5 text-white/80">
-              <div className="w-2 h-2 bg-success rounded-full shadow-glow animate-pulse" style={{ boxShadow: '0 0 8px hsl(var(--success))', animationDelay: '0.5s' }} />
-              <span className="text-sm sm:text-base font-medium">No sign-up required</span>
-            </div>
-            <div className="flex items-center gap-2.5 text-white/80">
-              <div className="w-2 h-2 bg-success rounded-full shadow-glow animate-pulse" style={{ boxShadow: '0 0 8px hsl(var(--success))', animationDelay: '1s' }} />
-              <span className="text-sm sm:text-base font-medium">Privacy-first</span>
-            </div>
-          </div>
+          {/* CTA Button - Large gradient pill with animation */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6, delay: 0.4, ease: [0.21, 0.47, 0.32, 0.98] }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Button
+              onClick={() => navigate("/find-meetup")}
+              variant="gradient"
+              size="xl"
+              className="group font-semibold"
+            >
+              Find Your Spot
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
+            </Button>
+          </motion.div>
+
+          {/* Trust indicators - Animated */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8, delay: 0.6 }}
+            className="mt-16 sm:mt-20 flex flex-wrap items-center justify-center gap-6 sm:gap-10"
+          >
+            {[
+              { text: "Free to use", delay: 0 },
+              { text: "No sign-up required", delay: 0.1 },
+              { text: "Privacy-first", delay: 0.2 },
+            ].map((item, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.7 + item.delay }}
+                className="flex items-center gap-2.5 text-white/80"
+              >
+                <div className="w-2 h-2 bg-success rounded-full shadow-glow animate-pulse" style={{ boxShadow: '0 0 8px hsl(var(--success))', animationDelay: `${index * 0.5}s` }} />
+                <span className="text-sm sm:text-base font-medium">{item.text}</span>
+              </motion.div>
+            ))}
+          </motion.div>
         </div>
       </div>
 
